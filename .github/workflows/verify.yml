@@ -1,0 +1,22 @@
+name: Verify Volergon site
+on:
+  push:
+    branches: ['main', 'feat/**']
+  pull_request:
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run build
+      - run: npm run check
+      - name: Publish deployment artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: volergon-site-dist
+          path: dist/
