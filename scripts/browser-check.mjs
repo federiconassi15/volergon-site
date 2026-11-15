@@ -45,14 +45,32 @@ for(const viewport of [{width:1440,height:900,label:'desktop'},{width:390,height
   }
   await context.close();
 }
-const webglContext=await browser.newContext({viewport:{width:780,height:600},deviceScaleFactor:1});
+// Test actual motion, not just the existence of a canvas: record a pointer/scroll sequence
+// to an artifact, capture two rendered frames, and check that the shader moves.
+const webglContext=await browser.newContext({viewport:{width:780,height:600},deviceScaleFactor:1,recordVideo:{dir:shot,size:{width:780,height:600}}});
 const webglPage=await webglContext.newPage();
 const shaderWarnings=[];
 webglPage.on('console',msg=>{if(msg.type()==='warning')shaderWarnings.push(msg.text())});
 await webglPage.goto(base+'/',{waitUntil:'domcontentloaded'});
 await webglPage.waitForTimeout(1800);
-console.log('WebGL probe: enhancement',await webglPage.locator('.showcase.has-webgl').count()===1,'warnings',shaderWarnings.length);
+const hasWebgl=await webglPage.locator('.showcase.has-webgl').count()===1;
+console.log('WebGL probe: enhancement',hasWebgl,'warnings',shaderWarnings.length);
+assert(hasWebgl,'WebGL hero did not start in CI browser with SwiftShader');
 await webglPage.locator('.showcase').screenshot({path:shot+'webgl-probe.png',animations:'disabled',timeout:45000});
+const frameA=await webglPage.locator('.field-canvas').screenshot({timeout:45000});
+await webglPage.mouse.move(220,260,{steps:12});
+await webglPage.waitForTimeout(550);
+await webglPage.mouse.move(580,350,{steps:20});
+await webglPage.waitForTimeout(400);
+const frameB=await webglPage.locator('.field-canvas').screenshot({timeout:45000});
+assert(!frameA.equals(frameB),'Live WebGL canvas did not change between pointer/timeline frames');
+await webglPage.mouse.wheel(0,410);
+await webglPage.waitForTimeout(470);
+await webglPage.mouse.wheel(0,-410);
+await webglPage.waitForTimeout(330);
+const webglVideo=webglPage.video();
+await webglPage.close();
+if(webglVideo)await webglVideo.saveAs(shot+'webgl-motion-proof.webm');
 await webglContext.close();
 const reduced=await browser.newContext({viewport:{width:1280,height:800},reducedMotion:'reduce'});
 const reducedPage=await reduced.newPage();
