@@ -70,3 +70,18 @@ The site's product descriptions distinguish development intentions from shipped 
 ## License
 
 MIT (see `LICENSE`). External names and trademarks remain the property of their owners. No commercial font assets included.
+
+### Automated browser QA
+
+The GitHub Actions `browser-qa` job installs a known Playwright/Chromium version and checks all pages at desktop/mobile sizes, menu keyboard handling, Bureau concept tabs, Golden Ratio controls, reduced-motion fallback, JavaScript exceptions and horizontal overflow. It uploads screenshots as a review artifact. This is a testing-only development dependency, not shipped with the website.
+
+Run locally (when browser access is allowed):
+
+```bash
+npm install --no-save playwright@1.56.1
+npx playwright install chromium
+npm run dev  # in a second terminal
+node scripts/browser-check.mjs
+```
+
+The maintainers must visually inspect the screenshots; a passing browser check is not a subjective art-direction approval.
