@@ -12,7 +12,7 @@ let failures = [];
 const assert = (yes,detail)=>{if(!yes)failures.push(detail)};
 
 for(const viewport of [{width:1440,height:900,label:'desktop'},{width:390,height:844,label:'mobile'}]) {
-  const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
+  const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1,reducedMotion:'reduce'});
   for(const item of pages){
     const page=await context.newPage();
     const exceptions=[];
@@ -27,10 +27,7 @@ for(const viewport of [{width:1440,height:900,label:'desktop'},{width:390,height
     assert(exceptions.length===0,viewport.label+' '+item.path+' page errors '+exceptions.join('; '));
     await page.screenshot({path:shot+viewport.label+'-'+(item.path==='/'?'home':item.path.replaceAll('/',''))+'.png',animations:'disabled',timeout:35000});
     if(item.path==='/'){
-      if(viewport.label==='desktop'){
-        const canvas=page.locator('.field-canvas');
-        console.log('WebGL enhancement detected:',await page.locator('.showcase.has-webgl').count()>0,'canvas',await canvas.count());
-      }
+      // Static reduced-motion layouts are tested here; WebGL gets a separate low-resolution probe below.
       await page.locator('.menu-trigger').click();
       assert(await page.locator('.menu-trigger').getAttribute('aria-expanded')==='true',viewport.label+' menu failed to open');
       await page.keyboard.press('Escape');
@@ -48,6 +45,15 @@ for(const viewport of [{width:1440,height:900,label:'desktop'},{width:390,height
   }
   await context.close();
 }
+const webglContext=await browser.newContext({viewport:{width:780,height:600},deviceScaleFactor:1});
+const webglPage=await webglContext.newPage();
+const shaderWarnings=[];
+webglPage.on('console',msg=>{if(msg.type()==='warning')shaderWarnings.push(msg.text())});
+await webglPage.goto(base+'/',{waitUntil:'domcontentloaded'});
+await webglPage.waitForTimeout(1800);
+console.log('WebGL probe: enhancement',await webglPage.locator('.showcase.has-webgl').count()===1,'warnings',shaderWarnings.length);
+await webglPage.locator('.showcase').screenshot({path:shot+'webgl-probe.png',animations:'disabled',timeout:45000});
+await webglContext.close();
 const reduced=await browser.newContext({viewport:{width:1280,height:800},reducedMotion:'reduce'});
 const reducedPage=await reduced.newPage();
 await reducedPage.goto(base+'/',{waitUntil:'domcontentloaded'});

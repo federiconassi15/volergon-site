@@ -71,7 +71,7 @@ void main(){
  vec3 forward=normalize(target-ro),right=normalize(cross(forward,vec3(0.,1.,0.))),up=cross(right,forward);
  vec3 rd=normalize(forward*1.52+right*uv.x+up*uv.y);
  float dist=0.;vec2 hit=vec2(1e3,0.);vec3 pos=ro;
- for(int i=0;i<74;i++){
+ for(int i=0;i<56;i++){
    pos=ro+rd*dist;
    hit=scene(pos);
    if(hit.x<.0022||dist>12.)break;
@@ -153,10 +153,11 @@ export function createField(canvas, { reducedMotion = false } = {}) {
  };
  const vertexArray=gl.createVertexArray(); gl.bindVertexArray(vertexArray);
  let raf=0, running=true, visible=true, pointer=[0,0], target=[0,0], progress=0, start=performance.now(), last=0;
- let quality=window.matchMedia('(max-width: 600px)').matches?0.78:1.0;
+ let quality=window.matchMedia('(max-width: 600px)').matches?0.76:0.86;
  const resize=()=>{
    const rect=canvas.getBoundingClientRect();
-   const dpr=Math.min(window.devicePixelRatio||1,1.25)*quality;
+   const cap=Math.min(1,980/Math.max(1,rect.width));
+   const dpr=Math.min(window.devicePixelRatio||1,1.25)*quality*cap;
    const w=Math.max(1,Math.floor(rect.width*dpr)),h=Math.max(1,Math.floor(rect.height*dpr));
    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
  };
