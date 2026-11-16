@@ -4,6 +4,9 @@ import { execFileSync } from 'node:child_process';
 import { pages } from '../src/site.mjs';
 
 const root = resolve(new URL('../dist', import.meta.url).pathname);
+const siteUrl = (process.env.PUBLIC_SITE_URL || '').replace(/\/$/, '');
+const basePath = siteUrl ? new URL(siteUrl).pathname.replace(/\/+$/, '') : '';
+const unprefix = url => basePath && url.startsWith(basePath + '/') ? url.slice(basePath.length) : url;
 const errors=[];
 const assets = [];
 const names = new Set();
@@ -18,13 +21,14 @@ for (const page of pages) {
   if(names.has(page.path))errors.push('Duplicate route '+page.path);
   names.add(page.path);
   for(const link of html.matchAll(/href="(\/[^"#?]*)"/g)){
-    const url=link[1];
+    const url=unprefix(link[1]);
     let target=join(root,url.slice(1));
     if(url.endsWith('/'))target=join(target,'index.html');
     if(!await exists(target))errors.push('Broken internal link: '+page.path+' -> '+url);
   }
-  for(const src of html.matchAll(/(?:src|href)="(\/assets\/[^"?]*)"/g)){
-    if(!await exists(join(root,src[1].slice(1))))errors.push('Missing asset: '+src[1]);
+  for(const src of html.matchAll(/(?:src|href)="(\/[^"?]*)"/g)){
+    const asset = unprefix(src[1]);
+    if(asset.startsWith("/assets/") && !await exists(join(root,asset.slice(1)))) errors.push("Missing asset: " + src[1]);
   }
   if(page.path==='/golden-ratio/'&&!html.includes('NOT YET RELEASED'))errors.push('Golden Ratio must be labeled unreleased');
   if(page.path==='/bureau/'&&!html.includes('model-agnostic'))errors.push('Bureau identity missing');
