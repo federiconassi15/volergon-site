@@ -15,6 +15,15 @@ jobs:
           node-version: '22'
       - run: npm run build
       - run: npm run check
+      - name: Validate GitHub Pages base path
+        env:
+          PUBLIC_SITE_URL: https://federiconassi15.github.io/volergon-site
+        run: |
+          npm run build
+          npm run check
+          grep -q 'href="/volergon-site/bureau/"' dist/index.html
+          grep -q 'href="/volergon-site/assets/site.css"' dist/index.html
+          grep -q 'src="/volergon-site/assets/motion.js"' dist/index.html
       - name: Publish deployment artifact for review
         uses: actions/upload-artifact@v4
         with:
