@@ -1,0 +1,62 @@
+name: Verify Volergon site
+on:
+  push:
+    branches: ['main', 'feat/**']
+  pull_request:
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run build
+      - run: npm run check
+      - name: Validate GitHub Pages base path
+        env:
+          PUBLIC_SITE_URL: https://federiconassi15.github.io/volergon-site
+        run: |
+          npm run build
+          npm run check
+          grep -q 'href="/volergon-site/bureau/"' dist/index.html
+          grep -q 'href="/volergon-site/assets/site.css"' dist/index.html
+          grep -q 'src="/volergon-site/assets/motion.js"' dist/index.html
+      - name: Publish deployment artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: volergon-site-dist
+          path: dist/
+  browser-qa:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start static server
+        run: |
+          nohup node scripts/dev.mjs > /tmp/volergon-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/volergon-server.log
+          exit 1
+      - name: Test pages, interactions and visual widths
+        run: node scripts/browser-check.mjs
+      - name: Upload visual review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: volergon-browser-screenshots
+          path: visual-evidence/
+          if-no-files-found: ignore
